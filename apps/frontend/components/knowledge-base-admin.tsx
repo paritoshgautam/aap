@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { RefreshCw, Upload } from "lucide-react";
 import { apiBaseUrl } from "@/lib/api";
+import { clearAdminSession, getAdminToken } from "@/lib/auth";
 
 type Subject = {
   id: string;
@@ -48,7 +49,7 @@ export function KnowledgeBaseAdmin() {
   );
 
   useEffect(() => {
-    const storedToken = localStorage.getItem("adaptive_admin_token");
+    const storedToken = getAdminToken();
     setToken(storedToken);
   }, []);
 
@@ -78,6 +79,9 @@ export function KnowledgeBaseAdmin() {
       });
       if (sourceResponse.ok) {
         setSources(await sourceResponse.json());
+      } else if (sourceResponse.status === 401) {
+        clearAdminSession();
+        setToken(null);
       }
     }
   }

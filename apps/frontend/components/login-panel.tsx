@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiBaseUrl } from "@/lib/api";
+import { setAdminSession } from "@/lib/auth";
 
 type Mode = "login" | "bootstrap";
 
@@ -33,8 +34,7 @@ export function LoginPanel() {
       setMessage(payload.detail ?? "Authentication failed");
       return;
     }
-    localStorage.setItem("adaptive_admin_token", payload.access_token);
-    localStorage.setItem("adaptive_admin_email", payload.user.email);
+    setAdminSession(payload.access_token, payload.user.email);
     router.push("/upload");
   }
 

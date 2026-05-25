@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { WandSparkles } from "lucide-react";
 import { apiBaseUrl, type Subject, type Topic } from "@/lib/api";
+import { clearAdminSession, getAdminToken } from "@/lib/auth";
 
 type QuestionType = "mcq" | "numeric" | "open_ended";
 
@@ -27,7 +28,7 @@ export function QuestionGeneratorPanel({ subjects, topics }: QuestionGeneratorPa
   }, [selectedSubjectId, topics]);
 
   useEffect(() => {
-    setToken(localStorage.getItem("adaptive_admin_token"));
+    setToken(getAdminToken());
   }, []);
 
   useEffect(() => {
@@ -64,6 +65,13 @@ export function QuestionGeneratorPanel({ subjects, topics }: QuestionGeneratorPa
     });
     const payload = await response.json();
     setIsGenerating(false);
+
+    if (response.status === 401) {
+      clearAdminSession();
+      setToken(null);
+      setMessage("Your admin session expired. Sign in again, then retry generation.");
+      return;
+    }
 
     if (!response.ok) {
       setMessage(formatApiError(payload.detail));

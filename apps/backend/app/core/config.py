@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     jwt_secret_key: str = Field(default="local-dev-change-me", min_length=16)
     jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60
+    access_token_expire_minutes: int = 1440
     openai_api_key: str | None = None
     storage_root: Path = Path("uploads")
     max_upload_mb: int = 50
