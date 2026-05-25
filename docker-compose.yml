@@ -1,0 +1,86 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: adaptive_assessment
+      POSTGRES_USER: adaptive
+      POSTGRES_PASSWORD: adaptive
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U adaptive -d adaptive_assessment"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./apps/backend
+    environment:
+      APP_ENV: local
+      DATABASE_URL: postgresql+asyncpg://adaptive:adaptive@postgres:5432/adaptive_assessment
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET_KEY: local-dev-change-me
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      STORAGE_ROOT: /data/uploads
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/backend:/app
+      - backend_uploads:/data/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ./apps/backend
+    command: ["dramatiq", "app.workers.tasks"]
+    environment:
+      APP_ENV: local
+      DATABASE_URL: postgresql+asyncpg://adaptive:adaptive@postgres:5432/adaptive_assessment
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET_KEY: local-dev-change-me
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      STORAGE_ROOT: /data/uploads
+    volumes:
+      - ./apps/backend:/app
+      - backend_uploads:/data/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./apps/frontend
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/api/v1
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/frontend:/app
+      - frontend_node_modules:/app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  backend_uploads:
+  frontend_node_modules:
